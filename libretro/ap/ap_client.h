@@ -24,6 +24,13 @@ void ap_start(retro_environment_t env, const char *content_path);
 void ap_frame(void);
 void ap_stop(void);
 
+/* Text to draw on the game picture this frame (NULL when nothing to show).
+ * Called from the emulator thread. */
+const char *ap_overlay_text(void);
+
+/* Draws the overlay onto an RGB565 frame (implemented in ap_glue.cpp). */
+void ap_draw_overlay(uint16_t *screen, int pitch_pixels, int width, int height);
+
 #ifdef __cplusplus
 }
 #endif

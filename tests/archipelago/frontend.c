@@ -48,7 +48,25 @@ static bool env(unsigned cmd, void *data)
    }
 }
 
-static void video(const void *d, unsigned w, unsigned h, size_t p) {}
+static int frame_no, dump_at = -1;
+static const char *dump_path;
+static void video(const void *d, unsigned w, unsigned h, size_t p)
+{
+   FILE *f;
+   unsigned x, y;
+   if (++frame_no != dump_at || !d || !dump_path)
+      return;
+   f = fopen(dump_path, "wb");
+   fprintf(f, "P6 %u %u 255\n", w, h);
+   for (y = 0; y < h; y++)
+      for (x = 0; x < w; x++)
+      {
+         uint16_t px = ((const uint16_t *)((const uint8_t *)d + y * p))[x];
+         unsigned char rgb[3] = {(unsigned char)((px >> 11) << 3), (unsigned char)(((px >> 5) & 63) << 2), (unsigned char)((px & 31) << 3)};
+         fwrite(rgb, 1, 3, f);
+      }
+   fclose(f);
+}
 static void audio(int16_t l, int16_t r) {}
 static size_t audio_batch(const int16_t *d, size_t f) { return f; }
 static void poll_cb(void) {}
@@ -65,6 +83,7 @@ int main(int argc, char **argv)
       return 1;
    }
    sysdir = argv[3];
+   if (getenv("DUMP_FRAME")) { dump_at = atoi(getenv("DUMP_FRAME")); dump_path = getenv("DUMP_PATH"); }
    frames = atoi(argv[4]) * 60;
    h = dlopen(argv[1], RTLD_NOW);
    if (!h)

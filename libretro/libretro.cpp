@@ -1083,7 +1083,7 @@ void retro_get_system_info(struct retro_system_info *info)
 #ifndef GIT_VERSION
 #define GIT_VERSION ""
 #endif
-    info->library_version = VERSION " AP-3" GIT_VERSION;
+    info->library_version = VERSION " AP-4" GIT_VERSION;
     info->valid_extensions = "smc|sfc|swc|fig|bs|st";
     info->need_fullpath = false;
     info->block_extract = false;
@@ -2459,6 +2459,9 @@ bool retro_unserialize(const void* data, size_t size)
 
 bool8 S9xDeinitUpdate(int width, int height)
 {
+    /* Archipelago status line, drawn before any cropping or filtering. */
+    ap_draw_overlay(GFX.Screen, GFX.Pitch >> 1, width, height);
+
     static int burst_phase = 0;
     int overscan_offset = 0;
 

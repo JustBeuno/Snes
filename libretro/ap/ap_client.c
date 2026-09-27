@@ -62,9 +62,12 @@ static int g_msg_ext; /* frontend supports SET_MESSAGE_EXT */
 
 static int g_active;
 static int g_msg_only; /* inactive, but still show the startup message */
+static char g_overlay[MSG_TEXT_SIZE];
+static unsigned g_overlay_until;
+#define OVERLAY_FRAMES 420 /* ~7 seconds */
 static uint8_t g_rom_name[ROMNAME_SIZE];
 static int g_new_message_queue;
-static char g_cfg_paths[2][1024];
+static char g_cfg_paths[3][1024];
 static int g_cfg_count;
 
 /* guarded by g_lock */
@@ -948,9 +951,9 @@ static void show_messages(void)
 {
    char text[MSG_TEXT_SIZE];
    int have = 0;
-   unsigned gap = g_msg_ext ? 20 : 480;
+   unsigned gap = g_msg_count > 3 ? 90 : OVERLAY_FRAMES / 2;
 
-   if (g_frame - g_last_msg_frame < gap)
+   if (g_last_msg_frame && g_frame - g_last_msg_frame < gap)
       return;
    pthread_mutex_lock(&g_lock);
    if (g_msg_count)
@@ -961,10 +964,15 @@ static void show_messages(void)
       have = 1;
    }
    pthread_mutex_unlock(&g_lock);
-   if (!have || !g_env)
+   if (!have)
       return;
 
    g_last_msg_frame = g_frame;
+   /* Draw it on the picture as well: RetroArch's notifications can be off. */
+   memcpy(g_overlay, text, sizeof(g_overlay));
+   g_overlay_until = g_frame + OVERLAY_FRAMES;
+   if (!g_env)
+      return;
    if (g_msg_ext)
    {
       struct retro_message_ext m;
@@ -1017,9 +1025,9 @@ void ap_start(retro_environment_t env, const char *content_path)
 
    ap_stop();
 
-   g_msg_only = 0;
    g_frame = 0;
    g_last_msg_frame = 0;
+   g_overlay_until = 0;
    pthread_mutex_lock(&g_lock);
    g_msg_head = g_msg_count = 0;
    pthread_mutex_unlock(&g_lock);
@@ -1058,6 +1066,9 @@ void ap_start(retro_environment_t env, const char *content_path)
       if (dir[0])
          snprintf(g_cfg_paths[g_cfg_count++], sizeof(g_cfg_paths[0]), "%s/archipelago.cfg", dir);
    }
+   if (env && env(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &sys) && sys && sys[0])
+      snprintf(g_cfg_paths[g_cfg_count++], sizeof(g_cfg_paths[0]), "%s/archipelago.cfg", sys);
+   sys = NULL;
    if (env && env(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &sys) && sys && sys[0])
       snprintf(g_cfg_paths[g_cfg_count++], sizeof(g_cfg_paths[0]), "%s/archipelago.cfg", sys);
 
@@ -1099,8 +1110,17 @@ void ap_frame(void)
    show_messages();
 }
 
+const char *ap_overlay_text(void)
+{
+   if (!(g_active || g_msg_only) || !g_overlay[0] || g_frame > g_overlay_until)
+      return NULL;
+   return g_overlay;
+}
+
 void ap_stop(void)
 {
+   g_overlay[0] = 0;
+   g_msg_only = 0;
    if (g_thread_started)
    {
       g_stop = 1;
