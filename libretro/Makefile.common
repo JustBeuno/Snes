@@ -1,0 +1,192 @@
+ifeq ($(LIBRETRO_COMM_DIR),)
+	LIBRETRO_COMM_DIR = $(CORE_DIR)/libretro/libretro-common
+endif
+
+INCFLAGS   = -I$(CORE_DIR)/libretro -I$(LIBRETRO_COMM_DIR)/include -I$(CORE_DIR) -I$(CORE_DIR)/apu/ -I$(CORE_DIR)/apu/bapu
+
+# Archipelago (SMZ3) client + mbedTLS
+MBEDTLS_DIR ?= $(CORE_DIR)/libretro/ap/mbedtls
+INCFLAGS += -I$(CORE_DIR)/libretro/ap -I$(MBEDTLS_DIR)/include
+
+ifneq (,$(findstring msvc2003,$(platform)))
+INCFLAGS += -I$(LIBRETRO_COMM_DIR)/include/compat/msvc
+endif
+
+SOURCES_C   := $(CORE_DIR)/c4emu.c \
+	       $(CORE_DIR)/msu1.c \
+	       $(CORE_DIR)/zipfile.c \
+	       $(CORE_DIR)/srtc.c \
+	       $(CORE_DIR)/obc1.c \
+	       $(CORE_DIR)/bsflash.c \
+	       $(CORE_DIR)/tile.c \
+	       $(CORE_DIR)/bsx.c \
+	       $(CORE_DIR)/spc7110.c \
+	       $(CORE_DIR)/fxemu.c \
+	       $(CORE_DIR)/sdd1.c \
+	       $(CORE_DIR)/seta.c \
+	       $(CORE_DIR)/sa1hw.c \
+	       $(CORE_DIR)/dsp.c \
+	       $(CORE_DIR)/filter/snes_ntsc.c \
+	       $(CORE_DIR)/libretro/ap/ap_client.c \
+	       $(CORE_DIR)/libretro/ap/ap_ws.c \
+	       $(CORE_DIR)/libretro/ap/cJSON.c \
+	       $(MBEDTLS_DIR)/library/aes.c \
+	       $(MBEDTLS_DIR)/library/aesce.c \
+	       $(MBEDTLS_DIR)/library/aesni.c \
+	       $(MBEDTLS_DIR)/library/aria.c \
+	       $(MBEDTLS_DIR)/library/asn1parse.c \
+	       $(MBEDTLS_DIR)/library/asn1write.c \
+	       $(MBEDTLS_DIR)/library/base64.c \
+	       $(MBEDTLS_DIR)/library/bignum.c \
+	       $(MBEDTLS_DIR)/library/bignum_core.c \
+	       $(MBEDTLS_DIR)/library/bignum_mod.c \
+	       $(MBEDTLS_DIR)/library/bignum_mod_raw.c \
+	       $(MBEDTLS_DIR)/library/block_cipher.c \
+	       $(MBEDTLS_DIR)/library/camellia.c \
+	       $(MBEDTLS_DIR)/library/ccm.c \
+	       $(MBEDTLS_DIR)/library/chacha20.c \
+	       $(MBEDTLS_DIR)/library/chachapoly.c \
+	       $(MBEDTLS_DIR)/library/cipher.c \
+	       $(MBEDTLS_DIR)/library/cipher_wrap.c \
+	       $(MBEDTLS_DIR)/library/cmac.c \
+	       $(MBEDTLS_DIR)/library/constant_time.c \
+	       $(MBEDTLS_DIR)/library/ctr_drbg.c \
+	       $(MBEDTLS_DIR)/library/debug.c \
+	       $(MBEDTLS_DIR)/library/des.c \
+	       $(MBEDTLS_DIR)/library/dhm.c \
+	       $(MBEDTLS_DIR)/library/ecdh.c \
+	       $(MBEDTLS_DIR)/library/ecdsa.c \
+	       $(MBEDTLS_DIR)/library/ecjpake.c \
+	       $(MBEDTLS_DIR)/library/ecp.c \
+	       $(MBEDTLS_DIR)/library/ecp_curves.c \
+	       $(MBEDTLS_DIR)/library/ecp_curves_new.c \
+	       $(MBEDTLS_DIR)/library/entropy.c \
+	       $(MBEDTLS_DIR)/library/entropy_poll.c \
+	       $(MBEDTLS_DIR)/library/error.c \
+	       $(MBEDTLS_DIR)/library/gcm.c \
+	       $(MBEDTLS_DIR)/library/hkdf.c \
+	       $(MBEDTLS_DIR)/library/hmac_drbg.c \
+	       $(MBEDTLS_DIR)/library/lmots.c \
+	       $(MBEDTLS_DIR)/library/lms.c \
+	       $(MBEDTLS_DIR)/library/md.c \
+	       $(MBEDTLS_DIR)/library/md5.c \
+	       $(MBEDTLS_DIR)/library/memory_buffer_alloc.c \
+	       $(MBEDTLS_DIR)/library/mps_reader.c \
+	       $(MBEDTLS_DIR)/library/mps_trace.c \
+	       $(MBEDTLS_DIR)/library/net_sockets.c \
+	       $(MBEDTLS_DIR)/library/nist_kw.c \
+	       $(MBEDTLS_DIR)/library/oid.c \
+	       $(MBEDTLS_DIR)/library/padlock.c \
+	       $(MBEDTLS_DIR)/library/pem.c \
+	       $(MBEDTLS_DIR)/library/pk.c \
+	       $(MBEDTLS_DIR)/library/pk_ecc.c \
+	       $(MBEDTLS_DIR)/library/pk_wrap.c \
+	       $(MBEDTLS_DIR)/library/pkcs12.c \
+	       $(MBEDTLS_DIR)/library/pkcs5.c \
+	       $(MBEDTLS_DIR)/library/pkcs7.c \
+	       $(MBEDTLS_DIR)/library/pkparse.c \
+	       $(MBEDTLS_DIR)/library/pkwrite.c \
+	       $(MBEDTLS_DIR)/library/platform.c \
+	       $(MBEDTLS_DIR)/library/platform_util.c \
+	       $(MBEDTLS_DIR)/library/poly1305.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_aead.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_cipher.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_client.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_driver_wrappers_no_static.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_ecp.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_ffdh.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_hash.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_mac.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_pake.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_rsa.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_se.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_slot_management.c \
+	       $(MBEDTLS_DIR)/library/psa_crypto_storage.c \
+	       $(MBEDTLS_DIR)/library/psa_its_file.c \
+	       $(MBEDTLS_DIR)/library/psa_util.c \
+	       $(MBEDTLS_DIR)/library/ripemd160.c \
+	       $(MBEDTLS_DIR)/library/rsa.c \
+	       $(MBEDTLS_DIR)/library/rsa_alt_helpers.c \
+	       $(MBEDTLS_DIR)/library/sha1.c \
+	       $(MBEDTLS_DIR)/library/sha256.c \
+	       $(MBEDTLS_DIR)/library/sha3.c \
+	       $(MBEDTLS_DIR)/library/sha512.c \
+	       $(MBEDTLS_DIR)/library/ssl_cache.c \
+	       $(MBEDTLS_DIR)/library/ssl_ciphersuites.c \
+	       $(MBEDTLS_DIR)/library/ssl_client.c \
+	       $(MBEDTLS_DIR)/library/ssl_cookie.c \
+	       $(MBEDTLS_DIR)/library/ssl_debug_helpers_generated.c \
+	       $(MBEDTLS_DIR)/library/ssl_msg.c \
+	       $(MBEDTLS_DIR)/library/ssl_ticket.c \
+	       $(MBEDTLS_DIR)/library/ssl_tls.c \
+	       $(MBEDTLS_DIR)/library/ssl_tls12_client.c \
+	       $(MBEDTLS_DIR)/library/ssl_tls12_server.c \
+	       $(MBEDTLS_DIR)/library/ssl_tls13_client.c \
+	       $(MBEDTLS_DIR)/library/ssl_tls13_generic.c \
+	       $(MBEDTLS_DIR)/library/ssl_tls13_keys.c \
+	       $(MBEDTLS_DIR)/library/ssl_tls13_server.c \
+	       $(MBEDTLS_DIR)/library/threading.c \
+	       $(MBEDTLS_DIR)/library/timing.c \
+	       $(MBEDTLS_DIR)/library/version.c \
+	       $(MBEDTLS_DIR)/library/version_features.c \
+	       $(MBEDTLS_DIR)/library/x509.c \
+	       $(MBEDTLS_DIR)/library/x509_create.c \
+	       $(MBEDTLS_DIR)/library/x509_crl.c \
+	       $(MBEDTLS_DIR)/library/x509_crt.c \
+	       $(MBEDTLS_DIR)/library/x509_csr.c \
+	       $(MBEDTLS_DIR)/library/x509write.c \
+	       $(MBEDTLS_DIR)/library/x509write_crt.c \
+	       $(MBEDTLS_DIR)/library/x509write_csr.c
+SOURCES_CXX := $(CORE_DIR)/apu/apu.cpp \
+	       $(CORE_DIR)/apu/bapu/dsp/sdsp.cpp \
+	       $(CORE_DIR)/apu/bapu/smp/smp.cpp \
+	       $(CORE_DIR)/apu/bapu/smp/smp_state.cpp \
+	       $(CORE_DIR)/cheats2.cpp \
+	       $(CORE_DIR)/clip.cpp \
+	       $(CORE_DIR)/controls.cpp \
+	       $(CORE_DIR)/cpu.cpp \
+	       $(CORE_DIR)/cpuexec.cpp \
+	       $(CORE_DIR)/cpuops.cpp \
+	       $(CORE_DIR)/crosshairs.cpp \
+	       $(CORE_DIR)/dma.cpp \
+	       $(CORE_DIR)/gfx.cpp \
+	       $(CORE_DIR)/globals.cpp \
+	       $(CORE_DIR)/loadzip.cpp \
+	       $(CORE_DIR)/memmap.cpp \
+	       $(CORE_DIR)/ppu.cpp \
+	       $(CORE_DIR)/sa1.cpp \
+	       $(CORE_DIR)/sa1cpu.cpp \
+	       $(CORE_DIR)/snapshot.cpp \
+	       $(CORE_DIR)/sha256.cpp \
+	       $(CORE_DIR)/bml.cpp \
+	       $(CORE_DIR)/fscompat.cpp \
+	       $(CORE_DIR)/libretro/libretro.cpp \
+	       $(CORE_DIR)/libretro/ap/ap_glue.cpp
+
+# libretro VFS support. On statically linked platforms the frontend
+# provides all of these symbols (file_stream, vfs_implementation and
+# friends are part of RetroArch there), so they must stay out of the
+# core or the final link sees every symbol twice; snes9x2010 uses the
+# same split.
+ifeq ($(STATIC_LINKING),1)
+else
+SOURCES_C += \
+	$(LIBRETRO_COMM_DIR)/compat/compat_posix_string.c \
+	$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
+	$(LIBRETRO_COMM_DIR)/compat/compat_snprintf.c \
+	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
+	$(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c \
+	$(LIBRETRO_COMM_DIR)/encodings/encoding_utf.c \
+	$(LIBRETRO_COMM_DIR)/encodings/encoding_deflate.c \
+	$(LIBRETRO_COMM_DIR)/file/file_path.c \
+	$(LIBRETRO_COMM_DIR)/file/file_path_io.c \
+	$(LIBRETRO_COMM_DIR)/streams/file_stream.c \
+	$(LIBRETRO_COMM_DIR)/streams/file_stream_transforms.c \
+	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
+	$(LIBRETRO_COMM_DIR)/time/rtime.c \
+	$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c \
+	$(LIBRETRO_COMM_DIR)/vfs/vfs_hybrid.c \
+	$(LIBRETRO_COMM_DIR)/file/retro_dirent.c
+endif
+
