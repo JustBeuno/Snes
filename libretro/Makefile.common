@@ -14,7 +14,8 @@ ifeq ($(platform), ctr)
 # 3DS: libctru headers, mbedTLS without Unix-only parts, and our own
 # (prefixed) zlib decompressor since RetroArch 3DS has no zlib.
 INCFLAGS += -I$(DEVKITPRO)/libctru/include -I$(CORE_DIR)/libretro/ap/zlib
-INCFLAGS += -DMBEDTLS_USER_CONFIG_FILE=\"ap_mbedtls_config.h\" -DZ_PREFIX
+INCFLAGS += -DMBEDTLS_USER_CONFIG_FILE=\"ap_mbedtls_config.h\"
+INCFLAGS += -include $(CORE_DIR)/libretro/ap/ap_zlib_prefix.h
 AP_ZLIB_SOURCES := $(CORE_DIR)/libretro/ap/zlib/adler32.c \
 	$(CORE_DIR)/libretro/ap/zlib/crc32.c \
 	$(CORE_DIR)/libretro/ap/zlib/inffast.c \

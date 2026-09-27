@@ -53,7 +53,8 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          git clone --depth 1 --branch v1.22.2 https://github.com/libretro/RetroArch.git ra
+          # Pinned RetroArch snapshot: current Snes9x needs helpers newer than 1.22.2.
+          git init -q ra && git -C ra fetch -q --depth 1 https://github.com/libretro/RetroArch.git 8e4598b6e6c15eb0654eff2c5c3549ad48f81e83 && git -C ra checkout -q FETCH_HEAD
           cp libretro/snes9x_libretro_ctr.a ra/libretro_ctr.a
           cd ra
           make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=0 USE_CTRULIB_2=1 DEVKITTOOLS="$DEVKITPRO/tools" -j"$(nproc)" 2>&1 | tee ../retroarch-build.log
