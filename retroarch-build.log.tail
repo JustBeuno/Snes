@@ -1,0 +1,150 @@
+CC libretro-common/streams/trans_stream_pipe.c
+CC libretro-common/encodings/encoding_deflate.c
+CC libretro-common/streams/trans_stream_deflate.c
+CC libretro-common/streams/rzip_stream.c
+CC libretro-common/file/archive_file_7z.c
+CC libretro-common/formats/7z/r7z_archive.c
+CC libretro-common/formats/7z/r7z_lzma.c
+CC libretro-common/formats/7z/r7z_lzma_stream.c
+CC libretro-common/formats/7z/r7z_lzma2.c
+CC libretro-common/formats/7z/r7z_bcj2.c
+CC libretro-common/formats/7z/r7z_filters.c
+CC libretro-common/formats/tga/rtga.c
+CC libretro-common/formats/dds/rdds.c
+CC libretro-common/formats/png/rpng.c
+CC libretro-common/formats/png/rpng_apng.c
+CC libretro-common/formats/png/rpng_encode.c
+CC libretro-common/file/rpng_file.c
+CC libretro-common/formats/jpeg/rjpeg.c
+CC libretro-common/formats/bmp/rbmp.c
+CC libretro-common/formats/webp/rwebp.c
+CC libretro-common/formats/vp8/rvp8.c
+CC libretro-common/formats/bmp/rbmp_encode.c
+CC libretro-common/file/rbmp_file.c
+CC libretro-common/formats/json/rjson.c
+CC libretro-common/formats/image_transfer.c
+CC libretro-common/formats/audio_transfer.c
+CC libretro-common/formats/data_transfer.c
+CC libretro-common/memmap/memmap.c
+CC libretro-common/formats/m3u/rm3u.c
+CC libretro-common/net/net_compat.c
+CC libretro-common/net/net_http.c
+CC libretro-common/net/net_http_parse.c
+CC libretro-common/net/net_socket.c
+CC core_updater_list.c
+CC network/natt.c
+CC network/natt_desc.c
+CC tasks/task_netplay_lan_scan.c
+CC tasks/task_netplay_nat_traversal.c
+CC tasks/task_pl_thumbnail_download.c
+CC tasks/task_netplay_find_content.c
+CC tasks/task_http.c
+CC tasks/task_core_updater.c
+CC tasks/task_cloudsync.c
+CC tasks/task_cloudsync_path.c
+CC network/cloud_sync/webdav.c
+CC network/cloud_sync_driver.c
+CC network/cloud_sync/google_drive.c
+CC libretro-common/net/net_socket_ssl_mbed.c
+CC network/tls_log.c
+CC libretro-common/net/net_ifinfo.c
+CC network/netplay/netplay_frontend.c
+CC network/netplay/netplay_room_parse.c
+CC cheevos/cheevos.c
+CC cheevos/cheevos_client.c
+CC cheevos/cheevos_menu.c
+CC cheevos/cheevos_badge.c
+CC libretro-common/formats/cdfs/cdfs.c
+CC deps/rcheevos/src/rc_client.c
+CC deps/rcheevos/src/rc_compat.c
+CC deps/rcheevos/src/rc_libretro.c
+CC deps/rcheevos/src/rc_util.c
+CC deps/rcheevos/src/rcheevos/alloc.c
+CC deps/rcheevos/src/rcheevos/condition.c
+CC deps/rcheevos/src/rcheevos/condset.c
+CC deps/rcheevos/src/rcheevos/consoleinfo.c
+CC deps/rcheevos/src/rcheevos/format.c
+CC deps/rcheevos/src/rcheevos/lboard.c
+CC deps/rcheevos/src/rcheevos/memref.c
+CC deps/rcheevos/src/rcheevos/operand.c
+CC deps/rcheevos/src/rcheevos/richpresence.c
+CC deps/rcheevos/src/rcheevos/runtime.c
+CC deps/rcheevos/src/rcheevos/runtime_progress.c
+CC deps/rcheevos/src/rcheevos/trigger.c
+CC deps/rcheevos/src/rcheevos/value.c
+CC deps/rcheevos/src/rhash/aes.c
+CC deps/rcheevos/src/rhash/cdreader.c
+CC deps/rcheevos/src/rhash/hash.c
+CC deps/rcheevos/src/rhash/hash_disc.c
+CC deps/rcheevos/src/rhash/hash_encrypted.c
+CC deps/rcheevos/src/rhash/hash_rom.c
+CC deps/rcheevos/src/rhash/hash_zip.c
+CC deps/rcheevos/src/rapi/rc_api_common.c
+CC deps/rcheevos/src/rapi/rc_api_info.c
+CC deps/rcheevos/src/rapi/rc_api_runtime.c
+CC deps/rcheevos/src/rapi/rc_api_user.c
+CC tasks/task_decompress.c
+CC gfx/video_filters/2xsai.c
+CC gfx/video_filters/super2xsai.c
+CC gfx/video_filters/supereagle.c
+CC gfx/video_filters/2xbr.c
+CC gfx/video_filters/darken.c
+CC gfx/video_filters/epx.c
+CC gfx/video_filters/scale2x.c
+CC gfx/video_filters/blargg_ntsc_snes.c
+CC gfx/video_filters/lq2x.c
+CC gfx/video_filters/phosphor2x.c
+CC gfx/video_filters/normal2x.c
+CC gfx/video_filters/normal2x_width.c
+CC gfx/video_filters/normal2x_height.c
+CC gfx/video_filters/normal4x.c
+CC gfx/video_filters/scanline2x.c
+CC gfx/video_filters/grid2x.c
+CC gfx/video_filters/grid3x.c
+CC gfx/video_filters/gameboy3x.c
+CC gfx/video_filters/gameboy4x.c
+CC gfx/video_filters/dot_matrix_3x.c
+CC gfx/video_filters/dot_matrix_4x.c
+CC gfx/video_filters/upscale_1_5x.c
+CC gfx/video_filters/upscale_1_66x_fast.c
+CC gfx/video_filters/upscale_256x_320x240.c
+CC gfx/video_filters/picoscale_256x_320x240.c
+CC gfx/video_filters/upscale_240x160_320x240.c
+CC gfx/video_filters/upscale_mix_240x160_320x240.c
+CC gfx/video_filters/dedither.c
+CC gfx/video_filters/pixel_art_aa.c
+CC gfx/video_filters/crop_borders.c
+CC gfx/video_filters/ntsc.c
+CC gfx/video_filters/ntsc_crt.c
+CC libretro-common/audio/dsp_filters/bitcrusher.c
+CC libretro-common/audio/dsp_filters/chorus.c
+CC libretro-common/audio/dsp_filters/crystalizer.c
+CC libretro-common/audio/dsp_filters/echo.c
+CC libretro-common/audio/dsp_filters/eq.c
+CC libretro-common/audio/dsp_filters/iir.c
+CC libretro-common/audio/dsp_filters/overdrive.c
+CC libretro-common/audio/dsp_filters/panning.c
+CC libretro-common/audio/dsp_filters/phaser.c
+CC libretro-common/audio/dsp_filters/reverb.c
+CC libretro-common/audio/dsp_filters/reverb_early.c
+CC libretro-common/audio/dsp_filters/tremolo.c
+CC libretro-common/audio/dsp_filters/vibrato.c
+CC libretro-common/audio/dsp_filters/wahwah.c
+CC libretro-common/audio/dsp_filters/wsolapitchtempo.c
+/opt/devkitpro/tools/bin/picasso gfx/drivers/ctr_shaders/ctr_sprite.vsh gfx/drivers/ctr_shaders/ctr_sprite.gsh -o gfx/drivers/ctr_shaders/ctr_sprite.shbin
+/opt/devkitpro/tools/bin/bin2s gfx/drivers/ctr_shaders/ctr_sprite.shbin > gfx/drivers/ctr_shaders/ctr_sprite.shbin.s
+/opt/devkitpro/devkitARM/bin/arm-none-eabi-as -o gfx/drivers/ctr_shaders/ctr_sprite.o gfx/drivers/ctr_shaders/ctr_sprite.shbin.s
+gfx/drivers/ctr_shaders/ctr_sprite.shbin.s: Assembler messages:
+gfx/drivers/ctr_shaders/ctr_sprite.shbin.s: Warning: end of file in comment; newline inserted
+rm gfx/drivers/ctr_shaders/ctr_sprite.shbin gfx/drivers/ctr_shaders/ctr_sprite.shbin.s
+LD retroarch_3ds.elf
+/opt/devkitpro/devkitARM/arm-none-eabi/bin/ld: warning: /opt/devkitpro/devkitARM/lib/gcc/arm-none-eabi/16.1.0/armv6k/fpu/crtn.o: missing .note.GNU-stack section implies executable stack
+/opt/devkitpro/devkitARM/arm-none-eabi/bin/ld: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+/opt/devkitpro/devkitARM/bin/arm-none-eabi-nm -CSn retroarch_3ds.elf > .lst
+rm -f retroarch_3ds.xml
+/opt/devkitpro/tools/bin/smdhtool --create "Snes9x" "RetroArch 3DS" "Team Libretro" pkg/ctr/assets/snes9x.png retroarch_3ds.smdh
+/opt/devkitpro/tools/bin/3dsxtool retroarch_3ds.elf retroarch_3ds.3dsx 
+absolute @ relSrc=00066CA8
+Relocation to invalid address!
+
+make: *** [Makefile.ctr:362: retroarch_3ds.3dsx] Error 1

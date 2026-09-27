@@ -1,0 +1,60 @@
+== relSrc 00066CA8 -> vaddr 0x00166ca8
+ssl_parse_server_hello
+ssl_tls12_client.c:?
+-- relocation entries at that offset (raw or based):
+001654b0 t ssl_check_server_ecdh_params
+00165588 t ssl_parse_certificate_request
+00165a80 t ssl_parse_server_hello
+
+Disassembly of section .text:
+
+00166c98 <ssl_parse_server_hello+0x1218>:
+  166c98:	0078b3f4 	.word	0x0078b3f4
+  166c9c:	0000066a 	.word	0x0000066a
+  166ca0:	0078ab80 	.word	0x0078ab80
+  166ca4:	e3a01001 	mov	r1, #1
+  166ca8:	e1a00004 	mov	r0, r4
+  166cac:	e51f2078 	ldr	r2, [pc, #-120]	@ 166c3c <ssl_parse_server_hello+0x11bc>
+  166cb0:	e51f3078 	ldr	r3, [pc, #-120]	@ 166c40 <ssl_parse_server_hello+0x11c0>
+  166cb4:	eafffe07 	b	1664d8 <ssl_parse_server_hello+0xa58>
+== sections
+There are 41 section headers, starting at offset 0xad678c:
+
+Section Headers:
+  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+  [ 1] .text             PROGBITS        00100000 001000 605d68 00  AX  0   0 32
+  [ 2] .rel.text         REL             00000000 994864 0c7d60 08   I 38   1  4
+  [ 3] .rodata           PROGBITS        00706000 607000 14b110 00   A  0   0  8
+  [ 4] .rel.rodata       REL             00000000 a5c5c4 013390 08   I 38   3  4
+  [ 5] .eh_frame         PROGBITS        00851110 752110 000000 00   A  0   0  4
+  [ 6] .ARM.extab        PROGBITS        00851110 752110 0024b8 00   A  0   0  4
+  [ 7] .rel.ARM.extab    REL             00000000 a6f954 000728 08   I 38   6  4
+  [ 8] .ARM.exidx        ARM_EXIDX       008535c8 7545c8 0011a8 00  AL  1   0  4
+  [ 9] .rel.ARM.exidx    REL             00000000 a7007c 003178 08   I 38   8  4
+  [10] .data             PROGBITS        00855000 756000 03088c 00  WA  0   0  8
+  [11] .rel.data         REL             00000000 a731f4 0100b0 08   I 38  10  4
+  [12] .got              PROGBITS        0088588c 78688c 000008 00  WA  0   0  4
+  [13] .got.plt          PROGBITS        00885894 786894 00000c 04  WA  0   0  4
+  [14] .tdata            PROGBITS        008858a0 7868e8 000000 00 WAT  0   0  4
+  [15] .tbss             NOBITS          008858a0 7868a0 000c08 00 WAT  0   0  4
+  [16] .init_array       INIT_ARRAY      008858a0 7868a0 00002c 04  WA  0   0  4
+  [17] .rel.init_array   REL             00000000 a832a4 000058 08   I 38  16  4
+  [18] .fini_array       FINI_ARRAY      008858cc 7868cc 00001c 04  WA  0   0  4
+  [19] .rel.fini_array   REL             00000000 a832fc 000038 08   I 38  18  4
+  [20] .bss              NOBITS          008858e8 7868e8 1df5cc 00  WA  0   0  8
+  [21] .debug_aranges    PROGBITS        00000000 7868e8 0027f8 00      0   0  8
+  [22] .rel.debug_aranges REL             00000000 a83334 002288 08   I 38  21  4
+  [23] .debug_info       PROGBITS        00000000 7890e0 056b58 00      0   0  1
+  [24] .rel.debug_info   REL             00000000 a855bc 03ca18 08   I 38  23  4
+  [25] .debug_abbrev     PROGBITS        00000000 7dfc38 00dfa7 00      0   0  1
+  [26] .debug_line       PROGBITS        00000000 7edbdf 03614d 00      0   0  1
+  [27] .rel.debug_line   REL             00000000 ac1fd4 002110 08   I 38  26  4
+  [28] .debug_frame      PROGBITS        00000000 823d2c 007304 00      0   0  4
+  [29] .rel.debug_frame  REL             00000000 ac40e4 004010 08   I 38  28  4
+  [30] .debug_str        PROGBITS        00000000 82b030 00f09f 01  MS  0   0  1
+  [31] .ARM.attributes   ARM_ATTRIBUTES  00000000 83a0cf 000030 00      0   0  1
+  [32] .note.GNU-stack   PROGBITS        00000000 83a0ff 000000 00      0   0  1
+  [33] .debug_loclists   PROGBITS        00000000 83a0ff 0350e2 00      0   0  1
+  [34] .rel.debug_loclists REL             00000000 ac80f4 009f88 08   I 38  33  4
+  [35] .debug_rnglists   PROGBITS        00000000 86f1e1 0060c9 00      0   0  1
