@@ -1,0 +1,5 @@
+arm-none-eabi-gcc (devkitARM release 66) 15.1.0
+STOCK 3DSX FAILED
+absolute @ relSrc=000511B8
+Relocation to invalid address!
+make: *** [Makefile.ctr:362: retroarch_3ds.3dsx] Error 1
