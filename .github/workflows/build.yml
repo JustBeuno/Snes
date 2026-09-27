@@ -74,6 +74,25 @@ jobs:
           name: 3ds
           path: out/*
 
+      - name: Diagnose 3dsx relocation errors
+        if: failure()
+        shell: bash
+        run: |
+          cd ra 2>/dev/null || exit 0
+          [ -f retroarch_3ds.elf ] || exit 0
+          T=$DEVKITARM/bin/arm-none-eabi
+          {
+            for rel in $(grep -o "relSrc=[0-9A-Fa-f]*" ../retroarch-build.log | cut -d= -f2 | sort -u); do
+              addr=$(printf "%08x" $((0x100000 + 0x$rel)))
+              echo "== relSrc $rel -> vaddr 0x$addr"
+              $T-addr2line -f -C -e retroarch_3ds.elf 0x$addr
+              $T-readelf -rW retroarch_3ds.elf | grep -i "^$addr" | head -5
+              $T-nm -nC retroarch_3ds.elf | awk -v a="$addr" 'tolower($1) <= a' | tail -3
+              $T-objdump -d --start-address=0x$(printf "%x" $((0x$addr - 16))) --stop-address=0x$(printf "%x" $((0x$addr + 16))) retroarch_3ds.elf | tail -12
+            done
+            echo "== sections"; $T-readelf -SW retroarch_3ds.elf | head -40
+          } > ../relocation-diagnosis.log 2>&1 || true
+
       - name: Save build logs to the ci-logs branch on failure
         if: failure()
         shell: bash
