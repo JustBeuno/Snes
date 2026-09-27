@@ -39,113 +39,46 @@ jobs:
 
   n3ds:
     runs-on: ubuntu-latest
-    # The same image RetroArch's own 3DS CI uses.
-    container:
-      image: reallibretroretroarch/libretro-build-devkitpro:latest
-      options: --user root
+    env:
+      # The same image RetroArch's own 3DS CI uses (older devkitARM that
+      # produces working .3dsx files for RetroArch).
+      IMAGE: reallibretroretroarch/libretro-build-devkitpro:latest
+      # Pinned RetroArch snapshot: current Snes9x needs helpers newer than 1.22.2.
+      RA_COMMIT: 8e4598b6e6c15eb0654eff2c5c3549ad48f81e83
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build the core for 3DS
+      - name: Build the core and RetroArch 3DS
         shell: bash
         run: |
-          set -o pipefail
-          make -C libretro platform=ctr -j"$(nproc)" 2>&1 | tee core-build.log
-
-      - name: Build RetroArch 3DS with this core
-        shell: bash
-        run: |
-          set -o pipefail
-          # Pinned RetroArch snapshot: current Snes9x needs helpers newer than 1.22.2.
-          git init -q ra && git -C ra fetch -q --depth 1 https://github.com/libretro/RetroArch.git 8e4598b6e6c15eb0654eff2c5c3549ad48f81e83 && git -C ra checkout -q FETCH_HEAD
-          cp libretro/snes9x_libretro_ctr.a ra/libretro_ctr.a
-          cd ra
-          make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=0 USE_CTRULIB_2=1 DEVKITTOOLS="$DEVKITPRO/tools" -j"$(nproc)" 2>&1 | tee ../retroarch-build.log
-          mkdir -p ../out
-          cp retroarch_3ds.3dsx ../out/snes9x_libretro.3dsx
-          ls -la ../out
-
-      - name: Also build an installable CIA (optional)
-        continue-on-error: true
-        run: |
-          cd ra
-          make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=1 USE_CTRULIB_2=1 DEVKITTOOLS="$DEVKITPRO/tools" retroarch_3ds.cia -j"$(nproc)"
-          cp retroarch_3ds.cia ../out/snes9x_libretro.cia
+          docker run --rm --user root -v "$PWD":/w -w /w -e RA_COMMIT "$IMAGE" bash -c '
+            set -o pipefail
+            make -C libretro platform=ctr -j"$(nproc)" 2>&1 | tee core-build.log || exit 1
+            git init -q ra && git -C ra fetch -q --depth 1 https://github.com/libretro/RetroArch.git "$RA_COMMIT" && git -C ra checkout -q FETCH_HEAD
+            cp libretro/snes9x_libretro_ctr.a ra/libretro_ctr.a
+            cd ra
+            make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=0 USE_CTRULIB_2=1 -j"$(nproc)" 2>&1 | tee ../retroarch-build.log || exit 1
+            mkdir -p ../out && cp retroarch_3ds.3dsx ../out/snes9x_libretro.3dsx
+            make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=1 USE_CTRULIB_2=1 retroarch_3ds.cia > ../cia-build.log 2>&1 && cp retroarch_3ds.cia ../out/snes9x_libretro.cia || echo "CIA build skipped"
+            chmod -R a+rwX /w
+          '
+          ls -la out
 
       - uses: actions/upload-artifact@v4
         with:
           name: 3ds
           path: out/*
 
-      - name: Diagnose 3dsx relocation errors
-        if: failure()
-        shell: bash
-        run: |
-          cd ra 2>/dev/null || exit 0
-          [ -f retroarch_3ds.elf ] || exit 0
-          T=$DEVKITARM/bin/arm-none-eabi
-          {
-            for rel in $(grep -o "relSrc=[0-9A-Fa-f]*" ../retroarch-build.log | cut -d= -f2 | sort -u); do
-              addr=$(printf "%08x" $((0x100000 + 0x$rel)))
-              echo "== relSrc $rel -> vaddr 0x$addr"
-              $T-addr2line -f -C -e retroarch_3ds.elf 0x$addr
-              echo "-- relocation entries at that offset (raw or based):"
-              $T-readelf -rW retroarch_3ds.elf | awk -v a="$addr" -v r="$(printf %08x 0x$rel)" '/^Relocation section/{sec=$3} tolower($1)==a || tolower($1)==r {print sec, $0}' | head -10
-              $T-nm -nC retroarch_3ds.elf | awk -v a="$addr" 'tolower($1) <= a' | tail -3
-              $T-objdump -d --start-address=0x$(printf "%x" $((0x$addr - 16))) --stop-address=0x$(printf "%x" $((0x$addr + 16))) retroarch_3ds.elf | tail -12
-            done
-            echo "== sections"; $T-readelf -SW retroarch_3ds.elf | head -40
-          } > ../relocation-diagnosis.log 2>&1 || true
-
       - name: Save build logs to the ci-logs branch on failure
         if: failure()
         shell: bash
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           mkdir -p /tmp/logs
           cp *.log /tmp/logs/ 2>/dev/null || true
-          for f in /tmp/logs/*.log; do grep -nE "error|Error|undefined reference|multiple definition" "$f" | head -200 > "$f.errors" || true; tail -150 "$f" > "$f.tail"; done
-          git config user.name "CI"
-          git config user.email "ci@users.noreply.github.com"
-          git checkout --orphan ci-logs
-          git rm -rq --cached . || true
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp /tmp/logs/* .
-          git add -A
-          git commit -qm "3DS build logs for run ${GITHUB_RUN_NUMBER}"
-          git push -f origin ci-logs
-
-  probe:
-    # Temporary: find which devkitARM image builds a working 3dsx (stock Snes9x).
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        tag: ["libretro"]
-    container:
-      image: reallibretroretroarch/libretro-build-devkitpro:latest
-      options: --user root
-    continue-on-error: true
-    steps:
-      - name: Control build (stock Snes9x)
-        shell: bash
-        run: |
-          mkdir -p /tmp/probe
-          R=/tmp/probe/result-${{ matrix.tag }}.txt
-          { $DEVKITARM/bin/arm-none-eabi-gcc --version | head -1; } > $R 2>&1
-          git clone -q https://github.com/libretro/snes9x.git stock && git -C stock checkout -q fae2fea
-          make -C stock/libretro platform=ctr -j"$(nproc)" > /tmp/probe/core.log 2>&1 || { echo "CORE BUILD FAILED" >> $R; tail -15 /tmp/probe/core.log >> $R; exit 0; }
-          git init -q ra && git -C ra fetch -q --depth 1 https://github.com/libretro/RetroArch.git 8e4598b6e6c15eb0654eff2c5c3549ad48f81e83 && git -C ra checkout -q FETCH_HEAD
-          cp stock/libretro/snes9x_libretro_ctr.a ra/libretro_ctr.a
-          if (cd ra && make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=0 USE_CTRULIB_2=1 DEVKITTOOLS="$DEVKITPRO/tools" -j"$(nproc)") > /tmp/probe/ra.log 2>&1; then echo "STOCK 3DSX OK" >> $R; else echo "STOCK 3DSX FAILED" >> $R; grep -E "error|Error|relSrc|invalid" /tmp/probe/ra.log | head -15 >> $R; fi
-      - name: Publish probe results
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p pub && cd pub && git init -q && cp /tmp/probe/result-*.txt .
-          git config user.name CI && git config user.email ci@users.noreply.github.com
-          git add -A && git commit -qm "probe ${{ matrix.tag }}"
-          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:ci-probe-${{ matrix.tag }}
+          for f in /tmp/logs/*.log; do grep -nE "error|Error|undefined reference|multiple definition|relSrc|invalid" "$f" | head -200 > "$f.errors" || true; tail -150 "$f" > "$f.tail"; done
+          cd /tmp/logs && git init -q && git config user.name CI && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm "3DS build logs for run ${GITHUB_RUN_NUMBER}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:ci-logs
 
   release:
     needs: [android, n3ds]
