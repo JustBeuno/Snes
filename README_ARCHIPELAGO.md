@@ -11,12 +11,36 @@ only switches on when it sees an SMZ3 multiworld ROM.
 ## Install (Android)
 
 1. On your phone, open the latest release of this repository and download
-   `snes9x_archipelago_libretro_android.so`.
-   (Use the `32bit` file only if you installed the 32-bit RetroArch.)
+   `snes9x_libretro_android.so`.
 2. In RetroArch: **Main Menu > Load Core > Install or Restore a Core**, and
-   pick the downloaded file.
-3. RetroArch lists it as **Snes9x Archipelago**. Your normal Snes9x core is
-   untouched.
+   pick the downloaded file. It replaces the **Snes9x** core and keeps
+   working for every SNES game.
+3. Force-stop RetroArch (Android Settings > Apps > RetroArch > Force stop)
+   and reopen it. **Quick Menu > Information > Core Information** should
+   show a version ending in `AP-`.
+
+Launch SMZ3 with **Snes9x** (not Snes9x 2005 or 2010). If a playlist or
+History entry keeps opening another core, use its **Set Core Association**.
+Don't update Snes9x with the Core Downloader; that puts the stock core back.
+
+The `snes9x_archipelago_*` files are the same core under its own name. RetroArch
+on Android only offers cores it has a core-info file for, so that name is
+mostly useful on desktop.
+
+## Install (3DS)
+
+The 3DS can't load cores as separate libraries; each core is a full
+RetroArch program. The release has one built with this core.
+
+- **Homebrew Launcher RetroArch:** copy `snes9x_libretro.3dsx` to
+  `sd:/retroarch/cores/`, replacing the existing file.
+- **Installed (CIA) RetroArch:** install `snes9x_libretro.cia` with FBI. It
+  replaces the installed Snes9x core.
+
+Turn on Wi-Fi on the 3DS. The settings file works the same way as on
+Android (next to your ROM on the SD card), and is easy to edit with the SD
+card in a computer. Expect a couple of seconds of slowdown while it
+connects: the secure handshake is heavy work for the 3DS processor.
 
 ## Each new room
 
