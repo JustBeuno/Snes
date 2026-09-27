@@ -1,0 +1,2 @@
+arm-none-eabi-gcc (devkitARM release 55) 10.2.0
+STOCK 3DSX OK
