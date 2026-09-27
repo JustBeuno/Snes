@@ -1,6 +1,7 @@
 /* Minimal WebSocket client over plain TCP or mbedTLS. See ap_ws.h. */
 #include "ap_ws.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,8 @@
 
 #include "ap_cacert.h"
 
+#include <zlib.h>
+
 #ifndef MSG_NOSIGNAL
 #define MSG_NOSIGNAL 0
 #endif
@@ -51,7 +54,18 @@ struct ap_ws
    size_t msg_len;
    size_t msg_cap;
    int in_message;  /* a fragmented data message is in progress */
+
+   /* permessage-deflate (RFC 7692), receive side */
+   int deflate_on;        /* negotiated with the server */
+   int server_no_ctx;     /* server resets its compression per message */
+   int msg_compressed;    /* current message has RSV1 set */
+   int inf_ready;
+   z_stream inf;
+   char *plain;           /* decompressed output buffer */
+   size_t plain_cap;
 };
+
+static int msg_reserve(ap_ws_t *ws, size_t extra);
 
 static long long now_ms(void)
 {
@@ -424,6 +438,7 @@ static int ws_handshake(ap_ws_t *ws, const char *host, int port,
                 "Connection: Upgrade\r\n"
                 "Sec-WebSocket-Key: %s\r\n"
                 "Sec-WebSocket-Version: 13\r\n"
+                "Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n"
                 "User-Agent: snes9x-archipelago\r\n"
                 "\r\n",
                 host, port, key_b64);
@@ -455,6 +470,87 @@ static int ws_handshake(ap_ws_t *ws, const char *host, int port,
       snprintf(err, err_len, "Server refused WebSocket (%.60s)", resp);
       return -1;
    }
+
+   /* Did the server accept compression? (header names are case-insensitive) */
+   {
+      char *p;
+      for (p = resp; *p; p++)
+         *p = (char)tolower((unsigned char)*p);
+      p = strstr(resp, "\r\nsec-websocket-extensions:");
+      if (p)
+      {
+         char *eol = strstr(p + 2, "\r\n");
+         if (eol)
+            *eol = 0;
+         if (strstr(p, "permessage-deflate"))
+         {
+            ws->deflate_on = 1;
+            ws->server_no_ctx = strstr(p, "server_no_context_takeover") != NULL;
+         }
+      }
+   }
+   if (ws->deflate_on)
+   {
+      memset(&ws->inf, 0, sizeof(ws->inf));
+      if (inflateInit2(&ws->inf, -15) != Z_OK)
+      {
+         snprintf(err, err_len, "Compression setup failed");
+         return -1;
+      }
+      ws->inf_ready = 1;
+   }
+   return 0;
+}
+
+/* Decompress the assembled message in ws->msg (RFC 7692). */
+static int inflate_message(ap_ws_t *ws)
+{
+   static const unsigned char tail[4] = {0x00, 0x00, 0xFF, 0xFF};
+   size_t out_len = 0;
+   int zr;
+
+   if (!ws->inf_ready || msg_reserve(ws, 4) != 0)
+      return -1;
+   memcpy(ws->msg + ws->msg_len, tail, 4);
+
+   ws->inf.next_in = (Bytef *)ws->msg;
+   ws->inf.avail_in = (uInt)(ws->msg_len + 4);
+   do
+   {
+      if (ws->plain_cap - out_len < 4096 + 1)
+      {
+         size_t cap = ws->plain_cap ? ws->plain_cap * 2 : 16384;
+         char *p;
+         if (cap > AP_WS_MAX_MESSAGE)
+            return -1;
+         p = (char *)realloc(ws->plain, cap);
+         if (!p)
+            return -1;
+         ws->plain = p;
+         ws->plain_cap = cap;
+      }
+      ws->inf.next_out = (Bytef *)ws->plain + out_len;
+      ws->inf.avail_out = (uInt)(ws->plain_cap - out_len - 1);
+      zr = inflate(&ws->inf, Z_SYNC_FLUSH);
+      out_len = (size_t)((char *)ws->inf.next_out - ws->plain);
+      if (zr != Z_OK && zr != Z_BUF_ERROR && zr != Z_STREAM_END)
+         return -1;
+   } while (ws->inf.avail_in > 0 || ws->inf.avail_out == 0);
+
+   if (ws->server_no_ctx)
+      inflateReset(&ws->inf);
+
+   /* Swap buffers so the caller keeps reading ws->msg. */
+   {
+      char *t = ws->msg;
+      size_t tc = ws->msg_cap;
+      ws->msg = ws->plain;
+      ws->msg_cap = ws->plain_cap;
+      ws->plain = t;
+      ws->plain_cap = tc;
+   }
+   ws->msg_len = out_len;
+   ws->msg[out_len] = 0;
    return 0;
 }
 
@@ -586,6 +682,7 @@ static int read_frame(ap_ws_t *ws)
    {
       ws->msg_len = 0;
       ws->in_message = 1;
+      ws->msg_compressed = ws->deflate_on && (h[0] & 0x40) != 0;
    }
    else if (opcode != 0x0 || !ws->in_message)
       return -1;
@@ -606,6 +703,8 @@ static int read_frame(ap_ws_t *ws)
    if (fin)
    {
       ws->in_message = 0;
+      if (ws->msg_compressed && inflate_message(ws) != 0)
+         return -1;
       return 1;
    }
    return 0;
@@ -651,8 +750,16 @@ static void ws_free(ap_ws_t *ws)
    mbedtls_x509_crt_free(&ws->ca);
    mbedtls_ctr_drbg_free(&ws->drbg);
    mbedtls_entropy_free(&ws->entropy);
+   if (ws->inf_ready)
+      inflateEnd(&ws->inf);
+   free(ws->plain);
    free(ws->msg);
    free(ws);
+}
+
+int ap_ws_compressed(ap_ws_t *ws)
+{
+   return ws && ws->deflate_on;
 }
 
 void ap_ws_close(ap_ws_t *ws)

@@ -34,6 +34,9 @@ int ap_ws_send_text(ap_ws_t *ws, const char *text, size_t len);
  * control frames are handled internally. */
 int ap_ws_poll(ap_ws_t *ws, int timeout_ms, char **msg, size_t *msg_len);
 
+/* 1 if the server agreed to compress messages. */
+int ap_ws_compressed(ap_ws_t *ws);
+
 void ap_ws_close(ap_ws_t *ws);
 
 #ifdef __cplusplus

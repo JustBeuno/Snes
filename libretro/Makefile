@@ -45,7 +45,7 @@ TARGET_NAME	= snes9x
 LIBS     =
 
 ifeq (,$(findstring msvc,$(platform)))
-LIBS		+= -lm
+LIBS		+= -lm -lz
 endif
 
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"

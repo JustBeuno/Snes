@@ -766,7 +766,8 @@ static void *net_thread(void *arg)
       }
       last_err[0] = 0;
       backoff = 2000;
-      logf_("WebSocket open to %s:%d", host, port);
+      logf_("WebSocket open to %s:%d%s", host, port,
+            ap_ws_compressed(n.ws) ? " (compressed)" : "");
 
       while (!g_stop && !n.refused)
       {
