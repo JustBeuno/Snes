@@ -25,6 +25,7 @@
 #include "mbedtls/error.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
+#include "mbedtls/platform_time.h"
 #include "mbedtls/x509_crt.h"
 #include "psa/crypto.h"
 
@@ -95,6 +96,13 @@ int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t 
    *olen = len;
    return 0;
 }
+
+/* MBEDTLS_PLATFORM_MS_TIME_ALT: millisecond clock for mbedTLS. */
+mbedtls_ms_time_t mbedtls_ms_time(void);
+mbedtls_ms_time_t mbedtls_ms_time(void)
+{
+   return (mbedtls_ms_time_t)osGetTime();
+}
 #endif
 
 static int stopped(ap_ws_t *ws)
@@ -146,6 +154,7 @@ static int tcp_connect(const char *host, int port, volatile int *stop,
 #ifdef TCP_NODELAY
       setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 #endif
+      (void)one;
 #ifdef SO_NOSIGPIPE
       setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
 #endif
