@@ -15,7 +15,7 @@ only switches on when it sees an SMZ3 multiworld ROM.
    (Use the `32bit` file only if you installed the 32-bit RetroArch.)
 2. In RetroArch: **Main Menu > Load Core > Install or Restore a Core**, and
    pick the downloaded file.
-3. RetroArch lists it as **snes9x_archipelago**. Your normal Snes9x core is
+3. RetroArch lists it as **Snes9x Archipelago**. Your normal Snes9x core is
    untouched.
 
 ## Each new room
@@ -24,9 +24,10 @@ only switches on when it sees an SMZ3 multiworld ROM.
    website's patch page, or the desktop Archipelago launcher).
 2. Load the patched ROM with the **snes9x_archipelago** core.
 3. The first time, an on-screen message tells you where it made the
-   settings file, `archipelago.cfg`. By default that is RetroArch's
-   **system** folder. You can also put one in the same folder as the ROM,
-   which takes priority.
+   settings file, `archipelago.cfg`: the same folder as your ROM. (If that
+   folder isn't writable it falls back to RetroArch's system folder.)
+   If you see "not an SMZ3 multiworld ROM" instead, the ROM isn't a patched
+   SMZ3 multiworld ROM.
 4. Open `archipelago.cfg` in any text editor and fill in the room address
    from the room page, for example:
 

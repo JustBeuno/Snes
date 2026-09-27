@@ -61,6 +61,7 @@ static retro_log_printf_t g_log;
 static int g_msg_ext; /* frontend supports SET_MESSAGE_EXT */
 
 static int g_active;
+static int g_msg_only; /* inactive, but still show the startup message */
 static uint8_t g_rom_name[ROMNAME_SIZE];
 static int g_new_message_queue;
 static char g_cfg_paths[2][1024];
@@ -255,16 +256,17 @@ static int load_config(ap_config_t *cfg, char *found_path, size_t found_len)
       return cfg->server[0] != 0;
    }
 
-   /* No file anywhere: create a template in the last (system) location. */
-   if (g_cfg_count > 0)
+   /* No file anywhere: create a template, preferring the ROM's folder
+    * (on Android the system folder is usually hidden from file managers). */
+   for (i = 0; i < g_cfg_count; i++)
    {
-      const char *path = g_cfg_paths[g_cfg_count - 1];
-      FILE *f = fopen(path, "w");
+      FILE *f = fopen(g_cfg_paths[i], "w");
       if (f)
       {
          fputs(CONFIG_TEMPLATE, f);
          fclose(f);
-         snprintf(found_path, found_len, "%s", path);
+         snprintf(found_path, found_len, "%s", g_cfg_paths[i]);
+         break;
       }
    }
    return 0;
@@ -1015,6 +1017,13 @@ void ap_start(retro_environment_t env, const char *content_path)
 
    ap_stop();
 
+   g_msg_only = 0;
+   g_frame = 0;
+   g_last_msg_frame = 0;
+   pthread_mutex_lock(&g_lock);
+   g_msg_head = g_msg_count = 0;
+   pthread_mutex_unlock(&g_lock);
+
    g_env = env;
    g_log = NULL;
    if (env && env(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
@@ -1028,8 +1037,15 @@ void ap_start(retro_environment_t env, const char *content_path)
        !(ap_mem_read(0x400000u + SMZ3_ROMNAME_START, g_rom_name, ROMNAME_SIZE) &&
          memcmp(g_rom_name, "ZSM", 3) == 0))
    {
+      char shown[ROMNAME_SIZE + 1];
+      int k;
+      ap_mem_read(SMZ3_ROMNAME_START, g_rom_name, ROMNAME_SIZE);
+      for (k = 0; k < ROMNAME_SIZE; k++)
+         shown[k] = (g_rom_name[k] >= 0x20 && g_rom_name[k] < 0x7F) ? (char)g_rom_name[k] : '?';
+      shown[ROMNAME_SIZE] = 0;
       g_active = 0;
-      logf_("Not an SMZ3 multiworld ROM, staying inactive");
+      g_msg_only = 1;
+      post_msg("Archipelago: not an SMZ3 multiworld ROM (title \"%s\")", shown);
       return; /* not an SMZ3 Archipelago ROM - stay out of the way */
    }
    g_new_message_queue = g_rom_name[7] >= '0' && g_rom_name[7] <= '9';
@@ -1069,7 +1085,14 @@ void ap_start(retro_environment_t env, const char *content_path)
 void ap_frame(void)
 {
    if (!g_active)
+   {
+      if (g_msg_only)
+      {
+         g_frame++;
+         show_messages();
+      }
       return;
+   }
    g_frame++;
    if (g_frame % TICK_FRAMES == 0)
       smz3_tick();
