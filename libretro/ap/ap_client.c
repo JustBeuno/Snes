@@ -715,12 +715,10 @@ static void *net_thread(void *arg)
 
       if (!load_config(&n.cfg, cfg_path, sizeof(cfg_path)))
       {
-         if (!said_setup)
-         {
+         if (said_setup % 7 == 0)
             post_msg("Archipelago: put your room address in %s",
                      cfg_path[0] ? cfg_path : "archipelago.cfg");
-            said_setup = 1;
-         }
+         said_setup++;
          sleep_ms_interruptible(3000);
          continue;
       }
@@ -948,7 +946,7 @@ static void show_messages(void)
 {
    char text[MSG_TEXT_SIZE];
    int have = 0;
-   unsigned gap = g_msg_ext ? 20 : 180;
+   unsigned gap = g_msg_ext ? 20 : 480;
 
    if (g_frame - g_last_msg_frame < gap)
       return;
@@ -970,7 +968,7 @@ static void show_messages(void)
       struct retro_message_ext m;
       memset(&m, 0, sizeof(m));
       m.msg = text;
-      m.duration = 4000;
+      m.duration = 8000;
       m.priority = 1;
       m.level = RETRO_LOG_INFO;
       m.target = RETRO_MESSAGE_TARGET_OSD;
@@ -982,7 +980,7 @@ static void show_messages(void)
    {
       struct retro_message m;
       m.msg = text;
-      m.frames = 180;
+      m.frames = 480;
       g_env(RETRO_ENVIRONMENT_SET_MESSAGE, &m);
    }
 }
@@ -1023,10 +1021,15 @@ void ap_start(retro_environment_t env, const char *content_path)
       g_log = logging.log;
    g_msg_ext = env && env(RETRO_ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION, &ver) && ver >= 1;
 
-   if (!ap_mem_read(SMZ3_ROMNAME_START, g_rom_name, ROMNAME_SIZE) ||
-       memcmp(g_rom_name, "ZSM", 3) != 0)
+   /* The title is stamped twice in SMZ3 ROMs; the official client reads the
+    * first copy, the second is the fallback. */
+   if (!(ap_mem_read(SMZ3_ROMNAME_START, g_rom_name, ROMNAME_SIZE) &&
+         memcmp(g_rom_name, "ZSM", 3) == 0) &&
+       !(ap_mem_read(0x400000u + SMZ3_ROMNAME_START, g_rom_name, ROMNAME_SIZE) &&
+         memcmp(g_rom_name, "ZSM", 3) == 0))
    {
       g_active = 0;
+      logf_("Not an SMZ3 multiworld ROM, staying inactive");
       return; /* not an SMZ3 Archipelago ROM - stay out of the way */
    }
    g_new_message_queue = g_rom_name[7] >= '0' && g_rom_name[7] <= '9';
@@ -1054,6 +1057,7 @@ void ap_start(retro_environment_t env, const char *content_path)
    g_last_msg_frame = 0;
 
    logf_("SMZ3 ROM detected (%.21s)", (const char *)g_rom_name);
+   post_msg("Archipelago: SMZ3 detected, connecting...");
    g_active = 1;
    g_stop = 0;
    if (pthread_create(&g_thread, NULL, net_thread, NULL) == 0)

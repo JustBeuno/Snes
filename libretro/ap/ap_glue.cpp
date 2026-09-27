@@ -21,9 +21,20 @@ static uint8_t *resolve(uint32_t addr, size_t len)
    }
    if (addr < 0xE00000u)
    {
-      if (Memory.ROM && addr + len <= (uint32_t)Memory.CalculatedSize)
-         return Memory.ROM + addr;
-      return NULL;
+      uint32_t size = Memory.CalculatedSize;
+      uint32_t idx = addr;
+      if (!Memory.ROM || addr + len > size)
+         return NULL;
+      /* Snes9x moves the halves of some large (ExHiROM) files around when
+       * loading. Map a file offset to where Snes9x actually put it. */
+      if (Memory.ExtendedFormat == CMemory::SMALLFIRST && size > 0x400000u)
+      {
+         uint32_t small = size - 0x400000u;
+         idx = addr < small ? addr + 0x400000u : addr - small;
+         if ((addr < small) != (addr + len - 1 < small))
+            return NULL; /* read straddles the two halves */
+      }
+      return Memory.ROM + idx;
    }
    return NULL;
 }
