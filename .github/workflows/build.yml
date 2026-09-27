@@ -39,7 +39,10 @@ jobs:
 
   n3ds:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:latest
+    # The same image RetroArch's own 3DS CI uses.
+    container:
+      image: reallibretroretroarch/libretro-build-devkitpro:latest
+      options: --user root
     steps:
       - uses: actions/checkout@v4
 
@@ -118,8 +121,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tag: ["20260221", "20251231", "20250728", "20250102"]
-    container: devkitpro/devkitarm:${{ matrix.tag }}
+        tag: ["libretro"]
+    container:
+      image: reallibretroretroarch/libretro-build-devkitpro:latest
+      options: --user root
     continue-on-error: true
     steps:
       - name: Control build (stock Snes9x)
