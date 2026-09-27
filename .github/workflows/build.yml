@@ -56,7 +56,7 @@ jobs:
           git clone --depth 1 --branch v1.22.2 https://github.com/libretro/RetroArch.git ra
           cp libretro/snes9x_libretro_ctr.a ra/libretro_ctr.a
           cd ra
-          make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=0 DEVKITTOOLS="$DEVKITPRO/tools" -j"$(nproc)" 2>&1 | tee ../retroarch-build.log
+          make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=0 USE_CTRULIB_2=1 DEVKITTOOLS="$DEVKITPRO/tools" -j"$(nproc)" 2>&1 | tee ../retroarch-build.log
           mkdir -p ../out
           cp retroarch_3ds.3dsx ../out/snes9x_libretro.3dsx
           ls -la ../out
@@ -65,7 +65,7 @@ jobs:
         continue-on-error: true
         run: |
           cd ra
-          make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=1 DEVKITTOOLS="$DEVKITPRO/tools" retroarch_3ds.cia -j"$(nproc)"
+          make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=1 USE_CTRULIB_2=1 DEVKITTOOLS="$DEVKITPRO/tools" retroarch_3ds.cia -j"$(nproc)"
           cp retroarch_3ds.cia ../out/snes9x_libretro.cia
 
       - uses: actions/upload-artifact@v4
