@@ -1,0 +1,39 @@
+== toolchain
+arm-none-eabi-gcc (devkitARM) 16.1.0
+GNU ld (GNU Binutils) 2.46.0.20260210
+3dstools 1.3.1-3
+devkitARM r68-1
+devkitARM-gdb 14.1-2
+devkitarm-binutils 2.46.0-1
+devkitarm-cmake 1.2.4-1
+devkitarm-crtls 1.2.6-1
+devkitarm-gcc 16.1.0-1
+devkitarm-newlib 4.6.0.20260123-5
+devkitarm-rules 1.6.0-4
+libctru 2.7.0-1
+== image tags
+"name":"latest"
+"name":"20260610"
+"name":"20260221"
+"name":"20260219"
+"name":"20251231"
+"name":"20251117"
+"name":"20250728"
+"name":"20250527"
+"name":"20250512"
+"name":"20250102"
+"name":"20241111"
+"name":"20241104"
+"name":"20240918"
+"name":"20240906"
+"name":"20240511"
+"name":"20240202"
+"name":"20230928"
+"name":"20230911"
+"name":"20230827"
+"name":"20230622"
+"name":"20230526"
+"name":"20230501"
+"name":"20230404"
+"name":"20230403"
+"name":"20221115"

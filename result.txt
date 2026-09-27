@@ -1,0 +1,9 @@
+STOCK 3DSX FAILED
+/opt/devkitpro/devkitARM/bin/arm-none-eabi-nm -CSn retroarch_3ds.elf > .lst
+rm -f retroarch_3ds.xml
+/opt/devkitpro/tools/bin/smdhtool --create "Snes9x" "RetroArch 3DS" "Team Libretro" pkg/ctr/assets/snes9x.png retroarch_3ds.smdh
+/opt/devkitpro/tools/bin/3dsxtool retroarch_3ds.elf retroarch_3ds.3dsx 
+absolute @ relSrc=000592B0
+Relocation to invalid address!
+
+make: *** [Makefile.ctr:362: retroarch_3ds.3dsx] Error 1
