@@ -86,7 +86,8 @@ jobs:
               addr=$(printf "%08x" $((0x100000 + 0x$rel)))
               echo "== relSrc $rel -> vaddr 0x$addr"
               $T-addr2line -f -C -e retroarch_3ds.elf 0x$addr
-              $T-readelf -rW retroarch_3ds.elf | grep -i "^$addr" | head -5
+              echo "-- relocation entries at that offset (raw or based):"
+              $T-readelf -rW retroarch_3ds.elf | awk -v a="$addr" -v r="$(printf %08x 0x$rel)" '/^Relocation section/{sec=$3} tolower($1)==a || tolower($1)==r {print sec, $0}' | head -10
               $T-nm -nC retroarch_3ds.elf | awk -v a="$addr" 'tolower($1) <= a' | tail -3
               $T-objdump -d --start-address=0x$(printf "%x" $((0x$addr - 16))) --stop-address=0x$(printf "%x" $((0x$addr + 16))) retroarch_3ds.elf | tail -12
             done
@@ -110,6 +111,37 @@ jobs:
           git add -A
           git commit -qm "3DS build logs for run ${GITHUB_RUN_NUMBER}"
           git push -f origin ci-logs
+
+  probe:
+    # Temporary diagnostics: toolchain versions and a stock Snes9x control build.
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    continue-on-error: true
+    steps:
+      - name: Control build (stock Snes9x) and toolchain info
+        shell: bash
+        run: |
+          mkdir -p /tmp/probe
+          {
+            echo "== toolchain"; $DEVKITARM/bin/arm-none-eabi-gcc --version | head -1; $DEVKITARM/bin/arm-none-eabi-ld --version | head -1
+            (dkp-pacman -Q 2>/dev/null || pacman -Q 2>/dev/null) | grep -Ei "devkitarm|libctru|3dstools|binutils" || true
+            echo "== image tags"; curl -s "https://hub.docker.com/v2/repositories/devkitpro/devkitarm/tags?page_size=25" | grep -o '"name":"[^"]*"' | head -25
+          } > /tmp/probe/toolchain.log 2>&1
+          git clone -q https://github.com/libretro/snes9x.git stock && git -C stock checkout -q fae2fea
+          make -C stock/libretro platform=ctr -j"$(nproc)" > /tmp/probe/stock-core.log 2>&1 || echo "core build failed" >> /tmp/probe/stock-core.log
+          git init -q ra && git -C ra fetch -q --depth 1 https://github.com/libretro/RetroArch.git 8e4598b6e6c15eb0654eff2c5c3549ad48f81e83 && git -C ra checkout -q FETCH_HEAD
+          cp stock/libretro/snes9x_libretro_ctr.a ra/libretro_ctr.a
+          (cd ra && make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=0 USE_CTRULIB_2=1 DEVKITTOOLS="$DEVKITPRO/tools" -j"$(nproc)") > /tmp/probe/stock-ra.log 2>&1 && echo "STOCK 3DSX OK" > /tmp/probe/result.txt || echo "STOCK 3DSX FAILED" > /tmp/probe/result.txt
+          tail -8 /tmp/probe/stock-ra.log >> /tmp/probe/result.txt
+      - name: Publish probe results
+        if: always()
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$PWD"
+          mkdir -p pub && cd pub && git init -q && cp /tmp/probe/*.txt /tmp/probe/toolchain.log . 2>/dev/null
+          git config user.name CI && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm "probe ${GITHUB_RUN_NUMBER}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:ci-probe
 
   release:
     needs: [android, n3ds]
