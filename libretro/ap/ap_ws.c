@@ -11,7 +11,9 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#ifndef _3DS
 #include <netinet/tcp.h>
+#endif
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -27,6 +29,7 @@
 #include "psa/crypto.h"
 
 #include "ap_cacert.h"
+#include "ap_platform.h"
 
 #include <zlib.h>
 
@@ -69,10 +72,30 @@ static int msg_reserve(ap_ws_t *ws, size_t extra);
 
 static long long now_ms(void)
 {
-   struct timespec ts;
-   clock_gettime(CLOCK_MONOTONIC, &ts);
-   return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+   return ap_now_ms();
 }
+
+#ifdef _3DS
+/* mbedTLS entropy on the 3DS (MBEDTLS_ENTROPY_HARDWARE_ALT): the system's
+ * hardware random number service. */
+int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen);
+int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen)
+{
+   static int ps_ready = 0;
+   (void)data;
+   *olen = 0;
+   if (!ps_ready)
+   {
+      if (R_FAILED(psInit()))
+         return -1;
+      ps_ready = 1;
+   }
+   if (R_FAILED(PS_GenerateRandomBytes(output, len)))
+      return -1;
+   *olen = len;
+   return 0;
+}
+#endif
 
 static int stopped(ap_ws_t *ws)
 {
@@ -120,7 +143,9 @@ static int tcp_connect(const char *host, int port, volatile int *stop,
       if (fd < 0)
          continue;
       set_nonblocking(fd);
+#ifdef TCP_NODELAY
       setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+#endif
 #ifdef SO_NOSIGPIPE
       setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
 #endif

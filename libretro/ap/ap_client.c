@@ -14,7 +14,7 @@
 #include "cJSON.h"
 
 #include <ctype.h>
-#include <pthread.h>
+#include "ap_platform.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,9 +51,19 @@ typedef struct
    int player;
 } net_item_t;
 
-static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_t g_thread;
+static ap_lock_t g_lock;
+static int g_lock_ready;
+static ap_thread_t g_thread;
 static int g_thread_started;
+
+static void ensure_lock(void)
+{
+   if (!g_lock_ready)
+   {
+      AP_LOCK_INIT(&g_lock);
+      g_lock_ready = 1;
+   }
+}
 static volatile int g_stop;
 
 static retro_environment_t g_env;
@@ -113,7 +123,7 @@ static void post_msg(const char *fmt, ...)
    va_end(ap);
    logf_("%s", buf);
 
-   pthread_mutex_lock(&g_lock);
+   AP_LOCK(&g_lock);
    if (g_msg_count == MSG_QUEUE_SIZE)
    {
       g_msg_head = (g_msg_head + 1) % MSG_QUEUE_SIZE;
@@ -122,7 +132,7 @@ static void post_msg(const char *fmt, ...)
    idx = (g_msg_head + g_msg_count) % MSG_QUEUE_SIZE;
    memcpy(g_msgs[idx], buf, sizeof(buf));
    g_msg_count++;
-   pthread_mutex_unlock(&g_lock);
+   AP_UNLOCK(&g_lock);
 }
 
 /* Queue a packet for the server. Caller holds g_lock. */
@@ -174,7 +184,7 @@ static void sleep_ms_interruptible(int ms)
    while (ms > 0 && !g_stop)
    {
       int step = ms > 100 ? 100 : ms;
-      usleep(step * 1000);
+      ap_sleep_ms(step);
       ms -= step;
    }
 }
@@ -544,7 +554,7 @@ static void handle_command(net_t *n, cJSON *cmd)
       n->players = cJSON_Duplicate(cJSON_GetObjectItem(cmd, "players"), 1);
       n->slot_info = cJSON_Duplicate(cJSON_GetObjectItem(cmd, "slot_info"), 1);
 
-      pthread_mutex_lock(&g_lock);
+      AP_LOCK(&g_lock);
       g_connected = 1;
       outbox_clear_locked();
       /* Re-send anything checked while the connection was shaky. */
@@ -569,7 +579,7 @@ static void handle_command(net_t *n, cJSON *cmd)
       }
       if (g_finished)
          outbox_push_locked("[{\"cmd\":\"StatusUpdate\",\"status\":30}]");
-      pthread_mutex_unlock(&g_lock);
+      AP_UNLOCK(&g_lock);
 
       me = player_name(n, n->slot);
       post_msg("Archipelago: connected as %s", me ? me : "player");
@@ -597,7 +607,7 @@ static void handle_command(net_t *n, cJSON *cmd)
       int idx = cJSON_IsNumber(index) ? index->valueint : -1;
       int resync = 0;
 
-      pthread_mutex_lock(&g_lock);
+      AP_LOCK(&g_lock);
       if (idx == 0)
          g_items_len = 0;
       if (idx >= 0 && (size_t)idx == g_items_len)
@@ -624,7 +634,7 @@ static void handle_command(net_t *n, cJSON *cmd)
       }
       else
          resync = 1;
-      pthread_mutex_unlock(&g_lock);
+      AP_UNLOCK(&g_lock);
 
       if (resync)
       {
@@ -673,14 +683,14 @@ static int flush_outbox(net_t *n)
    {
       char *s = NULL;
       int rc;
-      pthread_mutex_lock(&g_lock);
+      AP_LOCK(&g_lock);
       if (g_outbox_len)
       {
          s = g_outbox[0];
          memmove(g_outbox, g_outbox + 1, (g_outbox_len - 1) * sizeof(*g_outbox));
          g_outbox_len--;
       }
-      pthread_mutex_unlock(&g_lock);
+      AP_UNLOCK(&g_lock);
       if (!s)
          return 0;
       rc = ap_ws_send_text(n->ws, s, strlen(s));
@@ -700,7 +710,14 @@ static void net_reset(net_t *n)
    n->refused = 0;
 }
 
-static void *net_thread(void *arg)
+#ifdef _3DS
+#include <stdbool.h>
+/* Provided by RetroArch (libretro-common/net/net_compat.c): starts the
+ * 3DS socket service once for the whole program. */
+extern bool network_init(void);
+#endif
+
+static void net_thread(void *arg)
 {
    net_t n;
    char last_err[160] = "";
@@ -710,6 +727,13 @@ static void *net_thread(void *arg)
    (void)arg;
 
    memset(&n, 0, sizeof(n));
+#ifdef _3DS
+   if (!network_init())
+   {
+      post_msg("Archipelago: couldn't start the 3DS network - is Wi-Fi on?");
+      return;
+   }
+#endif
    srand((unsigned)time(NULL) ^ (unsigned)(uintptr_t)&n);
 
    while (!g_stop)
@@ -784,10 +808,10 @@ static void *net_thread(void *arg)
 
       ap_ws_close(n.ws);
       n.ws = NULL;
-      pthread_mutex_lock(&g_lock);
+      AP_LOCK(&g_lock);
       g_connected = 0;
       outbox_clear_locked();
-      pthread_mutex_unlock(&g_lock);
+      AP_UNLOCK(&g_lock);
 
       if (g_stop)
          break;
@@ -807,7 +831,6 @@ static void *net_thread(void *arg)
    net_reset(&n);
    if (n.datapackage)
       cJSON_Delete(n.datapackage);
-   return NULL;
 }
 
 /* ---------------------------------------------------------------- */
@@ -826,10 +849,10 @@ static void smz3_tick(void)
    unsigned recv_index, recv_item, item_out_ptr;
    int connected, finished, is_end = 0;
 
-   pthread_mutex_lock(&g_lock);
+   AP_LOCK(&g_lock);
    connected = g_connected;
    finished = g_finished;
-   pthread_mutex_unlock(&g_lock);
+   AP_UNLOCK(&g_lock);
    if (!connected)
       return;
 
@@ -859,10 +882,10 @@ static void smz3_tick(void)
    {
       if (!finished)
       {
-         pthread_mutex_lock(&g_lock);
+         AP_LOCK(&g_lock);
          g_finished = 1;
          outbox_push_locked("[{\"cmd\":\"StatusUpdate\",\"status\":30}]");
-         pthread_mutex_unlock(&g_lock);
+         AP_UNLOCK(&g_lock);
          post_msg("Archipelago: goal complete!");
       }
       return;
@@ -897,10 +920,10 @@ static void smz3_tick(void)
       location_id = SMZ3_LOCATIONS_START_ID + convert_loc_smz3_id_to_ap_id(item_index);
       snprintf(json, sizeof(json), "[{\"cmd\":\"LocationChecks\",\"locations\":[%lld]}]",
                (long long)location_id);
-      pthread_mutex_lock(&g_lock);
+      AP_LOCK(&g_lock);
       checked_add_locked(location_id);
       outbox_push_locked(json);
-      pthread_mutex_unlock(&g_lock);
+      AP_UNLOCK(&g_lock);
       logf_("Checked location %lld", (long long)location_id);
    }
 
@@ -912,13 +935,13 @@ static void smz3_tick(void)
    {
       net_item_t item;
       int have = 0;
-      pthread_mutex_lock(&g_lock);
+      AP_LOCK(&g_lock);
       if (item_out_ptr < g_items_len)
       {
          item = g_items[item_out_ptr];
          have = 1;
       }
-      pthread_mutex_unlock(&g_lock);
+      AP_UNLOCK(&g_lock);
 
       if (have)
       {
@@ -956,7 +979,7 @@ static void show_messages(void)
 
    if (g_last_msg_frame && g_frame - g_last_msg_frame < gap)
       return;
-   pthread_mutex_lock(&g_lock);
+   AP_LOCK(&g_lock);
    if (g_msg_count)
    {
       memcpy(text, g_msgs[g_msg_head], sizeof(text));
@@ -964,7 +987,7 @@ static void show_messages(void)
       g_msg_count--;
       have = 1;
    }
-   pthread_mutex_unlock(&g_lock);
+   AP_UNLOCK(&g_lock);
    if (!have)
       return;
 
@@ -1019,6 +1042,7 @@ static void dir_of(const char *path, char *out, size_t len)
 
 void ap_start(retro_environment_t env, const char *content_path)
 {
+   ensure_lock();
    struct retro_log_callback logging;
    const char *sys = NULL;
    unsigned ver = 0;
@@ -1029,9 +1053,9 @@ void ap_start(retro_environment_t env, const char *content_path)
    g_frame = 0;
    g_last_msg_frame = 0;
    g_overlay_until = 0;
-   pthread_mutex_lock(&g_lock);
+   AP_LOCK(&g_lock);
    g_msg_head = g_msg_count = 0;
-   pthread_mutex_unlock(&g_lock);
+   AP_UNLOCK(&g_lock);
 
    g_env = env;
    g_log = NULL;
@@ -1073,14 +1097,14 @@ void ap_start(retro_environment_t env, const char *content_path)
    if (env && env(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &sys) && sys && sys[0])
       snprintf(g_cfg_paths[g_cfg_count++], sizeof(g_cfg_paths[0]), "%s/archipelago.cfg", sys);
 
-   pthread_mutex_lock(&g_lock);
+   AP_LOCK(&g_lock);
    g_connected = 0;
    g_items_len = 0;
    g_checked_len = 0;
    g_finished = 0;
    g_msg_head = g_msg_count = 0;
    outbox_clear_locked();
-   pthread_mutex_unlock(&g_lock);
+   AP_UNLOCK(&g_lock);
    g_frame = 0;
    g_last_msg_frame = 0;
 
@@ -1088,7 +1112,7 @@ void ap_start(retro_environment_t env, const char *content_path)
    post_msg("Archipelago: SMZ3 detected, connecting...");
    g_active = 1;
    g_stop = 0;
-   if (pthread_create(&g_thread, NULL, net_thread, NULL) == 0)
+   if (ap_thread_start(&g_thread, net_thread, NULL) == 0)
       g_thread_started = 1;
    else
       post_msg("Archipelago: could not start network thread");
@@ -1120,17 +1144,18 @@ const char *ap_overlay_text(void)
 
 void ap_stop(void)
 {
+   ensure_lock();
    g_overlay[0] = 0;
    g_msg_only = 0;
    if (g_thread_started)
    {
       g_stop = 1;
-      pthread_join(g_thread, NULL);
+      ap_thread_join(&g_thread);
       g_thread_started = 0;
    }
    g_active = 0;
-   pthread_mutex_lock(&g_lock);
+   AP_LOCK(&g_lock);
    g_connected = 0;
    outbox_clear_locked();
-   pthread_mutex_unlock(&g_lock);
+   AP_UNLOCK(&g_lock);
 }

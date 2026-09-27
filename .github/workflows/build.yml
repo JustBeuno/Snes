@@ -1,0 +1,93 @@
+name: Build cores
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build with the Android NDK
+        run: |
+          NDK="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          echo "Using NDK at $NDK"
+          cd libretro/jni
+          "$NDK/ndk-build" -j"$(nproc)" APP_ABI="arm64-v8a armeabi-v7a" APP_PLATFORM=android-21
+
+      - name: Name the cores
+        run: |
+          mkdir -p out
+          # Official Snes9x file name, so RetroArch uses its existing Snes9x
+          # core info (without it RetroArch won't offer the core for .sfc
+          # files). Installing this replaces "Snes9x - Current".
+          cp libretro/libs/arm64-v8a/libretro.so   out/snes9x_libretro_android.so
+          cp libretro/libs/arm64-v8a/libretro.so   out/snes9x_archipelago_libretro_android.so
+          cp libretro/libs/armeabi-v7a/libretro.so out/snes9x_archipelago_32bit_libretro_android.so
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: out/*
+
+  n3ds:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the core for 3DS
+        run: make -C libretro platform=ctr -j"$(nproc)"
+
+      - name: Build RetroArch 3DS with this core
+        run: |
+          git clone --depth 1 --branch v1.22.2 https://github.com/libretro/RetroArch.git ra
+          cp libretro/snes9x_libretro_ctr.a ra/libretro_ctr.a
+          cd ra
+          make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=0 -j"$(nproc)"
+          mkdir -p ../out
+          cp retroarch_3ds.3dsx ../out/snes9x_libretro.3dsx
+          ls -la ../out
+
+      - name: Also build an installable CIA (optional)
+        continue-on-error: true
+        run: |
+          cd ra
+          make -f Makefile.ctr LIBRETRO=snes9x BUILD_CIA=1 retroarch_3ds.cia -j"$(nproc)"
+          cp retroarch_3ds.cia ../out/snes9x_libretro.cia
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 3ds
+          path: out/*
+
+  release:
+    needs: [android, n3ds]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish as a downloadable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          TAG="build-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" \
+            --title "SMZ3 Archipelago core (build ${GITHUB_RUN_NUMBER})" \
+            --notes "Android: download snes9x_libretro_android.so on your phone, then in RetroArch: Main Menu > Load Core > Install or Restore a Core (replaces Snes9x, keeps working for every SNES game). Force-stop RetroArch afterwards.
+
+          3DS (Homebrew Launcher RetroArch): copy snes9x_libretro.3dsx to sd:/retroarch/cores/ replacing the existing file. 3DS (CIA RetroArch): install snes9x_libretro.cia with FBI.
+
+          Don't update Snes9x with RetroArch's Core Downloader or it will put the stock core back." \
+            --latest
